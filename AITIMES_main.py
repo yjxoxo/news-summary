@@ -181,7 +181,7 @@ Only translate — do not add or remove any content.
 {korean_summary}
 """
     try:
-        llm_en = ChatOllama(model="qwen3:32b")
+        llm_en = ChatOllama(model="llama3.3:70b")
         response = llm_en.invoke(prompt)
         result = response.content if hasattr(response, "content") else str(response)
         # qwen3 thinking 태그 제거
