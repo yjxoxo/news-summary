@@ -180,12 +180,13 @@ Only translate — do not add or remove any content.
 
 {korean_summary}
 """
+    logger.info("영어 번역 시작")
     try:
         llm_en = ChatOllama(model="llama3.3:70b")
         response = llm_en.invoke(prompt)
         result = response.content if hasattr(response, "content") else str(response)
-        # qwen3 thinking 태그 제거
         result = re.sub(r'<think>.*?</think>', '', result, flags=re.DOTALL).strip()
+        logger.info(f"영어 번역 완료:\n{result}")
         return result
     except Exception as e:
         logger.error(f"영어 번역 실패: {e}")
@@ -396,7 +397,12 @@ for i, (title, content, url) in enumerate(zip(news_titles, news_contents, final_
             formatted_summary = remove_hashtag_second_line(formatted_summary)
 
     print(f"  → 영어 번역 중...")
+    logger.info(f"뉴스 {num} 영어 번역 요청")
     en_summary = translate_to_english(formatted_summary)
+    if en_summary:
+        logger.info(f"뉴스 {num} 영어 번역 성공")
+    else:
+        logger.warning(f"뉴스 {num} 영어 번역 결과 없음")
 
     summaries.append({
         "title": title,
