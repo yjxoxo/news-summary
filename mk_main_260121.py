@@ -19,6 +19,9 @@ import asyncio
 import aiosmtplib
 from langchain_ollama import ChatOllama
 
+API_KEY = os.environ.get("PERPLEXITY_API_KEY", "")
+API_URL = "https://api.perplexity.ai/chat/completions"
+
 LLM_TIMEOUT = 300  # 초: 이 시간 동안 Ollama 응답 없으면 타임아웃 경고
 
 def invoke_llm_with_timeout(llm, prompt):
@@ -243,6 +246,29 @@ def finish_sentence_llm(summary_text, llm):
     4. 추가 정보를 생성하지 마세요.
     """
 
+    # Perplexity API 먼저 시도
+    if API_KEY:
+        headers = {
+            "Authorization": f"Bearer {API_KEY}",
+            "Content-Type": "application/json"
+        }
+        payload = {
+            "model": "sonar",
+            "messages": [{"role": "user", "content": prompt}],
+            "temperature": 0.1
+        }
+        try:
+            api_response = requests.post(API_URL, headers=headers, json=payload)
+            api_response.raise_for_status()
+            data = api_response.json()
+            result = data["choices"][0]["message"]["content"].strip()
+            logger.info("finish_sentence_llm: Perplexity API 성공")
+            return result
+        except Exception as e:
+            logger.error(f"finish_sentence_llm: Perplexity API 실패 ({e}) → EEVE 폴백")
+            print(f"  → Perplexity API 실패, EEVE로 대체 처리 중...")
+
+    # EEVE 폴백
     timeout_count = 0
     error_count = 0
     while True:
@@ -261,9 +287,9 @@ def finish_sentence_llm(summary_text, llm):
             time.sleep(30)
         except Exception as e:
             error_count += 1
-            logger.error(f"finish_sentence_llm 오류 ({error_count}/3): {e}")
+            logger.error(f"finish_sentence_llm: EEVE 오류 ({error_count}/3): {e}")
             if error_count >= 3:
-                logger.warning("finish_sentence_llm: 오류 3회 초과 - 원본 텍스트 반환")
+                logger.warning("finish_sentence_llm: EEVE 오류 3회 초과 - 원본 텍스트 반환")
                 return summary_text
             time.sleep(1)
 
