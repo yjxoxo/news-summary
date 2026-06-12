@@ -180,21 +180,15 @@ Only translate — do not add or remove any content.
 
 {korean_summary}
 """
-    api_headers = {
-        "Authorization": f"Bearer {API_KEY}",
-        "Content-Type": "application/json"
-    }
-    payload = {
-        "model": sonar_model,
-        "messages": [{"role": "user", "content": prompt}],
-        "temperature": 0.1
-    }
     try:
-        response = requests.post(API_URL, headers=api_headers, json=payload)
-        response.raise_for_status()
-        return response.json()["choices"][0]["message"]["content"].strip()
+        llm_en = ChatOllama(model="qwen3:32b")
+        response = llm_en.invoke(prompt)
+        result = response.content if hasattr(response, "content") else str(response)
+        # qwen3 thinking 태그 제거
+        result = re.sub(r'<think>.*?</think>', '', result, flags=re.DOTALL).strip()
+        return result
     except Exception as e:
-        logger.error(f"영어 번역 API 실패: {e}")
+        logger.error(f"영어 번역 실패: {e}")
         return None
 
 
