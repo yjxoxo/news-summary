@@ -817,7 +817,7 @@ def main():
             
         # 5. 이메일 발송
         try:
-            to_email_list = os.environ["TO_EMAIL"].split(",")
+            to_email_list = os.environ["MK_TO_EMAIL"].split(",")
             subject = f"💌MK TOP10 NEWS SUMMARY TEST {send_time_str}"
             
             results = asyncio.run(send_bulk_email(to_email_list, subject, final_summary))

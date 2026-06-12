@@ -45,10 +45,11 @@ pip install requests beautifulsoup4 langchain-ollama aiosmtplib python-dotenv
 PERPLEXITY_API_KEY=your_perplexity_api_key
 SMTP_EMAIL=your_email@example.com
 SMTP_PASSWORD=your_smtp_password
-TO_EMAIL=recipient@example.com,recipient2@example.com
+AITIMES_TO_EMAIL=recipient@example.com,recipient2@example.com
+MK_TO_EMAIL=recipient@example.com,recipient2@example.com
 ```
 
-수신자 여러 명은 쉼표로 구분합니다.
+수신자 여러 명은 쉼표로 구분합니다. AI타임스와 매일경제 수신자를 별도로 설정할 수 있습니다.
 
 ## 실행
 

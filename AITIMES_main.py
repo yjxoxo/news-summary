@@ -509,6 +509,6 @@ async def send_bulk_email(to_emails, subject, body):
     logger.info("-" * 80 + "\n\n")
     return results
 
-to_email_list = os.environ["TO_EMAIL"].split(",")
+to_email_list = os.environ["AITIMES_TO_EMAIL"].split(",")
 subject = f"📰🤖AI TIMES NEWS SUMMARY TEST {date[5:16]}"
 asyncio.run(send_bulk_email(to_email_list, subject, final_summary))
