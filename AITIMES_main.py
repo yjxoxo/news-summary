@@ -172,24 +172,15 @@ API_KEY = os.environ["PERPLEXITY_API_KEY"]
 API_URL = "https://api.perplexity.ai/chat/completions"
 sonar_model = "sonar"
 
-def summarize_news_english(title, content):
-    prompt = f"""Summarize the following news article in English using this exact format:
+def translate_to_english(korean_summary):
+    prompt = f"""Translate the following Korean news summary to English.
+Keep the exact same format (🤖 hashtags, 1. 2. 3. structure).
+Translate hashtags to English as well.
+Only translate — do not add or remove any content.
 
-🤖 #hashtag1 #hashtag2
-1. Key point 1
-2. Key point 2
-3. Key point 3
-
-Rules:
-- Write 2-3 hashtags in English
-- Each point should be one concise sentence
-- Use exact numbers, percentages from the original
-- Do not add information not in the article
-
-Title: {title}
-Content: {content}
+{korean_summary}
 """
-    headers = {
+    api_headers = {
         "Authorization": f"Bearer {API_KEY}",
         "Content-Type": "application/json"
     }
@@ -199,11 +190,11 @@ Content: {content}
         "temperature": 0.1
     }
     try:
-        response = requests.post(API_URL, headers=headers, json=payload)
+        response = requests.post(API_URL, headers=api_headers, json=payload)
         response.raise_for_status()
         return response.json()["choices"][0]["message"]["content"].strip()
     except Exception as e:
-        logger.error(f"영어 요약 API 실패: {e}")
+        logger.error(f"영어 번역 API 실패: {e}")
         return None
 
 
@@ -405,8 +396,8 @@ for i, (title, content, url) in enumerate(zip(news_titles, news_contents, final_
             formatted_summary, found, next_line_exists = truncate_after_third_point(finish_sentence)
             formatted_summary = remove_hashtag_second_line(formatted_summary)
 
-    print(f"  → 영어 요약 생성 중...")
-    en_summary = summarize_news_english(title, content)
+    print(f"  → 영어 번역 중...")
+    en_summary = translate_to_english(formatted_summary)
 
     summaries.append({
         "title": title,
