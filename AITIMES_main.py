@@ -229,12 +229,17 @@ def finish_sentence_api(summary_text, sonar_model):
         response = requests.post(API_URL, headers=headers, json=payload)
         response.raise_for_status()
         data = response.json()
-
         return data["choices"][0]["message"]["content"].strip()
     except Exception as e:
         logger.error(f"API 호출 실패: {e}")
-        
-        return summary_text  # 실패 시 원문 반환
+        logger.info("Perplexity API 실패 → EEVE 모델로 폴백")
+        print(f"  → Perplexity API 실패, EEVE로 대체 처리 중...")
+        try:
+            response = llm.invoke(prompt)
+            return response.content if hasattr(response, "content") else str(response)
+        except Exception as e2:
+            logger.error(f"EEVE 폴백도 실패: {e2}")
+            return summary_text  # 둘 다 실패 시 원문 반환
 
 response = requests.get(base_url)
 soup = BeautifulSoup(response.text, 'html.parser')
