@@ -1,0 +1,17 @@
+FROM kanana-1.5-15.7b-a3b-instruct-q8_0.gguf
+
+TEMPLATE """{{- if .System }}
+<s>{{ .System }}</s>
+{{- end }}
+<s>Human:
+{{ .Prompt }}</s>
+<s>Assistant:
+"""
+
+SYSTEM """당신은 뉴스 기사를 요약하는 AI 어시스턴트입니다. 뉴스의 핵심 내용을 정확하게 파악하고, 간결하면서도 중요한 정보를 포함한 요약을 제공합니다. 요약은 객관적이고 사실에 기반해야 하며, 원문의 의도를 왜곡하지 않아야 합니다."""
+
+PARAMETER temperature 0.3
+PARAMETER top_p 0.8
+PARAMETER top_k 30
+PARAMETER stop <s>
+PARAMETER stop </s>

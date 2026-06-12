@@ -1,0 +1,22 @@
+FROM /home/kyj/huggingface/kanana-15.7b
+
+TEMPLATE """{{- if .System }}
+<s>{{ .System }}</s>
+{{- end }}
+<s>Human:
+{{ .Prompt }}</s>
+<s>Assistant:
+"""
+
+SYSTEM """You are Kanana, a Korean AI assistant for research and development.
+Answer primarily in Korean using clear, concise language.
+When code, commands, or configuration are needed, provide concrete, runnable examples.
+If information is uncertain or missing, say so honestly instead of guessing.
+Prefer step-by-step reasoning, but keep explanations as short as possible
+"""
+
+PARAMETER temperature 0.3
+PARAMETER top_p 0.8
+PARAMETER top_k 30
+PARAMETER stop <s>
+PARAMETER stop </s>

@@ -1,0 +1,8 @@
+*.ipynb
+.env
+*.log
+__pycache__/
+*.pyc
+*.pyd
+.ipynb_checkpoints/
+mk_main.pid

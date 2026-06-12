@@ -1,0 +1,17 @@
+FROM UNIVA-Bllossom_DeepSeek-llama3.3-Bllossom-70B-Q4_K_M.gguf
+
+TEMPLATE """{{- if .System }}
+<s>{{ .System }}</s>
+{{- end }}
+<s>Human:
+{{ .Prompt }}</s>
+<s>Assistant:
+"""
+
+SYSTEM """You are a helpful, precise, and polite AI assistant. Respond with precision, factuality, and clarity. Always reply in Korean unless otherwise specified by the user. If a question cannot be answered, state this directly."""
+
+PARAMETER temperature 0.3
+PARAMETER top_p 0.8
+PARAMETER top_k 30
+PARAMETER stop <s>
+PARAMETER stop </s>
