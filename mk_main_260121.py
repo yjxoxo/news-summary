@@ -244,6 +244,7 @@ def finish_sentence_llm(summary_text, llm):
     """
 
     timeout_count = 0
+    error_count = 0
     while True:
         try:
             response = invoke_llm_with_timeout(llm, prompt)
@@ -258,6 +259,13 @@ def finish_sentence_llm(summary_text, llm):
                 os._exit(1)
             print(f"   → 30초 대기 후 재시도...")
             time.sleep(30)
+        except Exception as e:
+            error_count += 1
+            logger.error(f"finish_sentence_llm 오류 ({error_count}/3): {e}")
+            if error_count >= 3:
+                logger.warning("finish_sentence_llm: 오류 3회 초과 - 원본 텍스트 반환")
+                return summary_text
+            time.sleep(1)
 
 def summarize_individual_news(num: int, title: str, content: str, url: str, llm) -> Optional[str]:
     """개별 뉴스 요약 - 예외처리 강화"""
