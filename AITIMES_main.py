@@ -195,7 +195,17 @@ Rules:
         return result
     except Exception as e:
         logger.error(f"영어 번역 실패: {e}")
-        return None
+        logger.info("영어 번역 실패 → EEVE 폴백")
+        print(f"  → 영어 번역 실패, EEVE로 대체 처리 중...")
+        try:
+            response = llm.invoke(prompt)
+            result = response.content if hasattr(response, "content") else str(response)
+            result = re.sub(r'<think>.*?</think>', '', result, flags=re.DOTALL).strip()
+            logger.info(f"영어 번역 EEVE 폴백 완료:\n{result}")
+            return result
+        except Exception as e2:
+            logger.error(f"영어 번역 EEVE 폴백도 실패: {e2}")
+            return None
 
 
 def finish_sentence_api(summary_text, sonar_model):
