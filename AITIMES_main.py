@@ -187,7 +187,7 @@ Rules:
 """
     logger.info("영어 번역 시작")
     try:
-        llm_en = ChatOllama(model="llama3.3:70b")
+        llm_en = ChatOllama(model="gpt-oss:20b")
         response = llm_en.invoke(prompt)
         result = response.content if hasattr(response, "content") else str(response)
         result = re.sub(r'<think>.*?</think>', '', result, flags=re.DOTALL).strip()
