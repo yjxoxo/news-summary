@@ -481,7 +481,8 @@ final_summary = combine_summaries(summaries)
 final_summary = re.sub(r'\[?핵심\s?요점\s?\d\]?', '', final_summary)
 final_summary = re.sub(r'\[해시\s?태그\s?\]', '', final_summary)
 final_summary = final_summary.replace(';', '.')
-final_summary = final_summary.replace('gp트', 'gpt')
+final_summary = re.sub(r'챗\s*[Gg][Pp]트', 'ChatGPT', final_summary)
+final_summary = re.sub(r'[Gg][Pp]트', 'GPT', final_summary)
 
 
 logger.info("최종 뉴스 요약 결과:\n%s", final_summary)
