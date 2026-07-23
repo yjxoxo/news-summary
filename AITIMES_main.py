@@ -172,51 +172,48 @@ API_KEY = os.environ["PERPLEXITY_API_KEY"]
 API_URL = "https://api.perplexity.ai/chat/completions"
 sonar_model = "sonar"
 
-def translate_to_english(korean_summary, title=""):
-    prompt = f"""Translate the following Korean news title and summary into natural English.
-
-Output format (strictly follow):
-TITLE: <translated title>
-🤖 <translated hashtags>
-1. <point 1>
-2. <point 2>
-3. <point 3>
-
-Rules:
-- First line must be: TITLE: <English title>
-- Keep the summary format: 🤖 line first, then 1. 2. 3.
-- Each numbered point must be a complete sentence with a clear subject (e.g. "Google released..." not "Released...").
-- Do NOT use a comma after the subject.
-- Translate hashtags to English. No underscores in hashtags (e.g. #AIRegulation not #AI_Regulation).
-- Keep proper nouns accurate (e.g. "Claude" not "Cloud", model names exactly as written).
-- Do not add or remove any information.
-
-Title: {title}
-Summary:
-{korean_summary}
-"""
-    logger.info("영어 번역 시작")
-    def _parse_result(text):
-        """TITLE: 줄과 나머지 요약을 분리해서 (title_en, summary_en) 반환"""
-        text = re.sub(r'<think>.*?</think>', '', text, flags=re.DOTALL).strip()
-        lines = text.splitlines()
-        title_en = None
-        summary_lines = []
-        for line in lines:
-            if line.lower().startswith("title:"):
-                title_en = line[line.index(':')+1:].strip()
-            else:
-                summary_lines.append(line)
-        summary_en = '\n'.join(summary_lines).strip()
-        return title_en, summary_en
-
+def translate_title(korean_title):
+    prompt = f"Translate this Korean news headline to English. Output only the translated title, nothing else.\n\n{korean_title}"
     try:
         llm_en = ChatOllama(model="gpt-oss:20b")
         response = llm_en.invoke(prompt)
         result = response.content if hasattr(response, "content") else str(response)
-        title_en, summary_en = _parse_result(result)
-        logger.info(f"영어 번역 완료 - 제목: {title_en}\n{summary_en}")
-        return title_en, summary_en
+        result = re.sub(r'<think>.*?</think>', '', result, flags=re.DOTALL).strip()
+        logger.info(f"제목 영어 번역 완료: {result}")
+        return result
+    except Exception as e:
+        logger.error(f"제목 영어 번역 실패: {e} → EEVE 폴백")
+        try:
+            response = llm.invoke(prompt)
+            result = response.content if hasattr(response, "content") else str(response)
+            result = re.sub(r'<think>.*?</think>', '', result, flags=re.DOTALL).strip()
+            return result
+        except Exception as e2:
+            logger.error(f"제목 영어 번역 EEVE 폴백도 실패: {e2}")
+            return korean_title
+
+
+def translate_to_english(korean_summary):
+    prompt = f"""Translate the following Korean news summary into natural English.
+
+Rules:
+- Keep the exact format: 🤖 line first, then 1. 2. 3.
+- Each numbered point must be a complete sentence with a clear subject (e.g. "Google released..." not "Released...").
+- Do NOT use a comma after the subject (e.g. "Google releases" not "Google, releases").
+- Translate hashtags to English. No underscores in hashtags (e.g. #AIRegulation not #AI_Regulation).
+- Keep proper nouns accurate (e.g. "Claude" not "Cloud", model names exactly as written).
+- Do not add or remove any information.
+
+{korean_summary}
+"""
+    logger.info("영어 번역 시작")
+    try:
+        llm_en = ChatOllama(model="gpt-oss:20b")
+        response = llm_en.invoke(prompt)
+        result = response.content if hasattr(response, "content") else str(response)
+        result = re.sub(r'<think>.*?</think>', '', result, flags=re.DOTALL).strip()
+        logger.info(f"영어 번역 완료:\n{result}")
+        return result
     except Exception as e:
         logger.error(f"영어 번역 실패: {e}")
         logger.info("영어 번역 실패 → EEVE 폴백")
@@ -224,12 +221,12 @@ Summary:
         try:
             response = llm.invoke(prompt)
             result = response.content if hasattr(response, "content") else str(response)
-            title_en, summary_en = _parse_result(result)
-            logger.info(f"영어 번역 EEVE 폴백 완료 - 제목: {title_en}\n{summary_en}")
-            return title_en, summary_en
+            result = re.sub(r'<think>.*?</think>', '', result, flags=re.DOTALL).strip()
+            logger.info(f"영어 번역 EEVE 폴백 완료:\n{result}")
+            return result
         except Exception as e2:
             logger.error(f"영어 번역 EEVE 폴백도 실패: {e2}")
-            return None, None
+            return None
 
 
 def finish_sentence_api(summary_text, sonar_model):
@@ -437,9 +434,10 @@ for i, (title, content, url) in enumerate(zip(news_titles, news_contents, final_
 
     print(f"  → 영어 번역 중...")
     logger.info(f"뉴스 {num} 영어 번역 요청")
-    title_en, en_summary = translate_to_english(formatted_summary, title)
+    title_en = translate_title(title)
+    en_summary = translate_to_english(formatted_summary)
     if en_summary:
-        logger.info(f"뉴스 {num} 영어 번역 성공 - 제목: {title_en}")
+        logger.info(f"뉴스 {num} 영어 번역 성공")
     else:
         logger.warning(f"뉴스 {num} 영어 번역 결과 없음")
 
