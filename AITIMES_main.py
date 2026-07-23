@@ -203,8 +203,8 @@ Summary:
         title_en = None
         summary_lines = []
         for line in lines:
-            if line.startswith("TITLE:"):
-                title_en = line[len("TITLE:"):].strip()
+            if line.lower().startswith("title:"):
+                title_en = line[line.index(':')+1:].strip()
             else:
                 summary_lines.append(line)
         summary_en = '\n'.join(summary_lines).strip()
