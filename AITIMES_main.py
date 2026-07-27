@@ -173,7 +173,7 @@ API_URL = "https://api.perplexity.ai/chat/completions"
 sonar_model = "sonar"
 
 def _extract_title_line(text):
-    """번역 결과에서 실제 제목 줄만 추출 (설명 텍스트 제거)."""
+    """번역 결과에서 실제 제목 줄만 추출."""
     for line in text.split('\n'):
         line = line.strip()
         if not line:
@@ -181,11 +181,21 @@ def _extract_title_line(text):
         # 한글 포함 줄은 설명 텍스트로 간주하고 스킵
         if any('가' <= c <= '힣' for c in line):
             continue
+        # "Overview:", "Title:", "Translation:" 같은 메타 접두어 제거
+        line = re.sub(r'^(overview|title|translation|translated\s+title)\s*:\s*', '', line, flags=re.IGNORECASE).strip()
+        if not line:
+            continue
+        # 두 문장이 합쳐진 경우 첫 문장만 사용 (". 소문자" 또는 ". 대문자" 패턴)
+        sentence_end = re.search(r'(?<=[.!?])\s+', line)
+        if sentence_end and len(line) > 80:
+            line = line[:sentence_end.start()].strip()
+        # 제목 끝 마침표 제거
+        line = line.rstrip('.')
         return line
-    return text.split('\n')[0].strip()
+    return text.strip().split('\n')[0]
 
 
-def _clean_english_body(text):
+def _clean_english_body(text, korean_summary=None):
     """번역 결과에서 프리앰블 제거, 🤖 이모지 정상화."""
     lines = text.split('\n')
     start = 0
@@ -204,6 +214,11 @@ def _clean_english_body(text):
     if first and '#' in first and not first.startswith('🤖'):
         corrected = re.sub(r'^[^\w#\s]*\s*', '🤖 ', first)
         result = corrected + '\n' + '\n'.join(result.split('\n')[1:])
+    # 🤖 줄이 없으면 한국어 원본에서 가져오기
+    if result and not result.startswith('🤖') and korean_summary:
+        ko_robot = next((l.strip() for l in korean_summary.split('\n') if l.strip().startswith('🤖')), None)
+        if ko_robot:
+            result = ko_robot + '\n' + result
     return result.strip()
 
 
@@ -249,7 +264,7 @@ Rules:
         response = llm_en.invoke(prompt)
         result = response.content if hasattr(response, "content") else str(response)
         result = re.sub(r'<think>.*?</think>', '', result, flags=re.DOTALL).strip()
-        result = _clean_english_body(result)
+        result = _clean_english_body(result, korean_summary)
         logger.info(f"영어 번역 완료:\n{result}")
         return result
     except Exception as e:
@@ -260,7 +275,7 @@ Rules:
             response = llm.invoke(prompt)
             result = response.content if hasattr(response, "content") else str(response)
             result = re.sub(r'<think>.*?</think>', '', result, flags=re.DOTALL).strip()
-            result = _clean_english_body(result)
+            result = _clean_english_body(result, korean_summary)
             logger.info(f"영어 번역 EEVE 폴백 완료:\n{result}")
             return result
         except Exception as e2:
