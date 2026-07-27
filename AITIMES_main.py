@@ -172,6 +172,41 @@ API_KEY = os.environ["PERPLEXITY_API_KEY"]
 API_URL = "https://api.perplexity.ai/chat/completions"
 sonar_model = "sonar"
 
+def _extract_title_line(text):
+    """번역 결과에서 실제 제목 줄만 추출 (설명 텍스트 제거)."""
+    for line in text.split('\n'):
+        line = line.strip()
+        if not line:
+            continue
+        # 한글 포함 줄은 설명 텍스트로 간주하고 스킵
+        if any('가' <= c <= '힣' for c in line):
+            continue
+        return line
+    return text.split('\n')[0].strip()
+
+
+def _clean_english_body(text):
+    """번역 결과에서 프리앰블 제거, 🤖 이모지 정상화."""
+    lines = text.split('\n')
+    start = 0
+    for i, line in enumerate(lines):
+        s = line.strip()
+        if not s:
+            continue
+        # 🤖 또는 이모지+# 줄, 또는 번호 목록 시작
+        if s[0] in '🤖✅🔹🔸' or (s[0].isdigit() and len(s) > 1 and s[1] in '.)'):
+            start = i
+            break
+    result_lines = lines[start:]
+    result = '\n'.join(result_lines).strip()
+    # 첫 줄이 이모지+해시태그 형식인데 🤖이 아닌 경우 교정
+    first = result.split('\n')[0].strip() if result else ''
+    if first and '#' in first and not first.startswith('🤖'):
+        corrected = re.sub(r'^[^\w#\s]*\s*', '🤖 ', first)
+        result = corrected + '\n' + '\n'.join(result.split('\n')[1:])
+    return result.strip()
+
+
 def translate_title(korean_title):
     prompt = f"Translate this Korean news headline to English. Output only the translated title, nothing else.\n\n{korean_title}"
     try:
@@ -179,6 +214,7 @@ def translate_title(korean_title):
         response = llm_en.invoke(prompt)
         result = response.content if hasattr(response, "content") else str(response)
         result = re.sub(r'<think>.*?</think>', '', result, flags=re.DOTALL).strip()
+        result = _extract_title_line(result)
         logger.info(f"제목 영어 번역 완료: {result}")
         return result
     except Exception as e:
@@ -187,6 +223,7 @@ def translate_title(korean_title):
             response = llm.invoke(prompt)
             result = response.content if hasattr(response, "content") else str(response)
             result = re.sub(r'<think>.*?</think>', '', result, flags=re.DOTALL).strip()
+            result = _extract_title_line(result)
             return result
         except Exception as e2:
             logger.error(f"제목 영어 번역 EEVE 폴백도 실패: {e2}")
@@ -212,6 +249,7 @@ Rules:
         response = llm_en.invoke(prompt)
         result = response.content if hasattr(response, "content") else str(response)
         result = re.sub(r'<think>.*?</think>', '', result, flags=re.DOTALL).strip()
+        result = _clean_english_body(result)
         logger.info(f"영어 번역 완료:\n{result}")
         return result
     except Exception as e:
@@ -222,6 +260,7 @@ Rules:
             response = llm.invoke(prompt)
             result = response.content if hasattr(response, "content") else str(response)
             result = re.sub(r'<think>.*?</think>', '', result, flags=re.DOTALL).strip()
+            result = _clean_english_body(result)
             logger.info(f"영어 번역 EEVE 폴백 완료:\n{result}")
             return result
         except Exception as e2:
