@@ -284,20 +284,19 @@ Rules:
 
 
 def finish_sentence_api(summary_text, sonar_model):
-    
+
     prompt = f"""
-다음 요약문을 뉴스 기사 문체로 자연스럽게 다듬어 주세요.
+다음 요약문의 종결어미를 제거하고 개조식으로 간결하게 다듬어 주세요.
 문장의 형식(🤖해시태그, 1. 2. 3. 형식 등)은 절대 바꾸지 마세요.
 아래 지침을 반드시 지켜야 합니다.
 
 [지침]
-1. 각 문장은 '-니다' 또는 '입니다.'로 끝나야 합니다.
-2. 문장이 명사형(~함, ~정리 등)으로 끝나도 자연스럽게 마무리합니다.
-3. 불필요한 반복은 줄이고, 연결을 자연스럽게 합니다.
-4. 숫자, 소수점, % 등 원문 표기를 그대로 사용하세요.
-5. 각 번호 앞의 '🤖', '1.', '2.', '3.'은 반드시 그대로 출력에 포함되어야 합니다. 절대 생략하지 마세요.
-6. 형식과 문장이 지침에 준수하는지 한번 더 확인하세요.
-7. 추가 정보를 생성하지 마세요.
+1. 각 문장은 '~함', '~됨', '~임', '~예정' 등 명사형(개조식)으로 끝나야 합니다. '-니다'로 끝나지 마세요.
+2. 불필요한 반복은 줄이고, 연결을 자연스럽게 합니다.
+3. 숫자, 소수점, % 등 원문 표기를 그대로 사용하세요.
+4. 각 번호 앞의 '🤖', '1.', '2.', '3.'은 반드시 그대로 출력에 포함되어야 합니다. 절대 생략하지 마세요.
+5. 형식과 문장이 지침에 준수하는지 한번 더 확인하세요.
+6. 추가 정보를 생성하지 마세요.
 
 [요약문]
 {summary_text}
@@ -465,39 +464,25 @@ for i, (title, content, url) in enumerate(zip(news_titles, news_contents, final_
         summary_text_truncated, found, next_line_exists = truncate_after_third_point(summary_text)
         summary_text_truncated = remove_hashtag_second_line(summary_text_truncated)
 
-        if is_lines_ending_with_nida(summary_text_truncated):
-            formatted_summary = summary_text_truncated
-            logger.info(f"summary_text_truncated*\n{summary_text_truncated}\n")
+        max_api_attempts = 3
+        finish_sentence = finish_sentence_api(summary_text_truncated, sonar_model)
+        finish_sentence, _, _ = truncate_after_third_point(finish_sentence)
+        finish_sentence = remove_hashtag_second_line(finish_sentence)
+
+        for attempt in range(max_api_attempts - 1):
+            if check_number_sequence(finish_sentence):
+                break
+            logger.info(f"API 후 번호 순서 오류 (시도 {attempt + 1}/{max_api_attempts}), API 재실행")
+            finish_sentence = finish_sentence_api(summary_text_truncated, sonar_model)
+            finish_sentence, _, _ = truncate_after_third_point(finish_sentence)
+            finish_sentence = remove_hashtag_second_line(finish_sentence)
         else:
-            max_api_attempts = 3
-            for attempt in range(max_api_attempts):
-                finish_sentence = finish_sentence_api(summary_text_truncated, sonar_model)
-                finish_sentence, found, next_line_exists = truncate_after_third_point(finish_sentence)
-                finish_sentence = remove_hashtag_second_line(finish_sentence)
-                if check_number_sequence(finish_sentence):
-                    break
-                else:
-                    logger.info(f"API 후 번호 순서 오류 (시도 {attempt + 1}/{max_api_attempts}), API 재실행")
-                    if attempt == max_api_attempts - 1:
-                        finish_sentence = summary_text_truncated
+            if not check_number_sequence(finish_sentence):
+                finish_sentence = summary_text_truncated
 
-            logger.info(f"summary_text_truncated*\n{summary_text_truncated}\nfinish_sentence*\n {finish_sentence}\n\n")
-
-            if not is_lines_ending_with_nida(finish_sentence):
-                logger.info("2차에서도 '-니다' 로 끝나지 않아서 요약 3차 재진행\n")
-                for attempt in range(max_api_attempts):
-                    finish_sentence = finish_sentence_api(summary_text_truncated, sonar_model)
-                    finish_sentence = remove_hashtag_second_line(finish_sentence)
-                    if check_number_sequence(finish_sentence):
-                        break
-                    else:
-                        logger.info(f"3차 API 후 번호 순서 오류 (시도 {attempt + 1}/{max_api_attempts})")
-                        if attempt == max_api_attempts - 1:
-                            finish_sentence = summary_text_truncated
-                logger.info(f"finish_sentence 2*\n {finish_sentence}\n\n")
-
-            formatted_summary, found, next_line_exists = truncate_after_third_point(finish_sentence)
-            formatted_summary = remove_hashtag_second_line(formatted_summary)
+        logger.info(f"summary_text_truncated*\n{summary_text_truncated}\nfinish_sentence*\n {finish_sentence}\n\n")
+        formatted_summary, _, _ = truncate_after_third_point(finish_sentence)
+        formatted_summary = remove_hashtag_second_line(formatted_summary)
 
     print(f"  → 영어 번역 중...")
     logger.info(f"뉴스 {num} 영어 번역 요청")
