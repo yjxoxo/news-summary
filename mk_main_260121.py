@@ -246,6 +246,10 @@ def finish_sentence_llm(summary_text, llm):
     4. 추가 정보를 생성하지 마세요.
     """
 
+    def _is_valid_summary(text):
+        """출력이 정상 요약 형식인지 확인 (프롬프트 지침 내용 반환 방지)."""
+        return '**지침**' not in text and bool(re.search(r'🚀\s*#', text))
+
     # Perplexity API 먼저 시도
     if API_KEY:
         headers = {
@@ -262,6 +266,9 @@ def finish_sentence_llm(summary_text, llm):
             api_response.raise_for_status()
             data = api_response.json()
             result = data["choices"][0]["message"]["content"].strip()
+            if not _is_valid_summary(result):
+                logger.warning("finish_sentence_llm: Perplexity 출력 비정상 → 원문 사용")
+                return summary_text
             logger.info("finish_sentence_llm: Perplexity API 성공")
             return result
         except Exception as e:
@@ -274,7 +281,12 @@ def finish_sentence_llm(summary_text, llm):
     while True:
         try:
             response = invoke_llm_with_timeout(llm, prompt)
-            return response.content if hasattr(response, "content") else str(response)
+            result = response.content if hasattr(response, "content") else str(response)
+            result = re.sub(r'<think>.*?</think>', '', result, flags=re.DOTALL).strip()
+            if not _is_valid_summary(result):
+                logger.warning("finish_sentence_llm: EEVE 출력 비정상 (**지침** 반환 등) → 원문 사용")
+                return summary_text
+            return result
         except TimeoutError:
             timeout_count += 1
             print(f"\n⚠️  Ollama {LLM_TIMEOUT}초 응답 없음! ({timeout_count}/5) GPU VRAM 부족 가능성")
