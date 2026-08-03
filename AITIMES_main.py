@@ -316,18 +316,31 @@ def finish_sentence_api(summary_text, sonar_model):
         "temperature": 0.1
     }
     
+    def _is_valid_summary(text):
+        """출력이 정상 요약 형식인지 확인 (프롬프트 지침 내용 반환 방지)."""
+        return '[지침]' not in text and bool(re.search(r'🤖\s*#', text))
+
     try:
         response = requests.post(API_URL, headers=headers, json=payload)
         response.raise_for_status()
         data = response.json()
-        return data["choices"][0]["message"]["content"].strip()
+        result = data["choices"][0]["message"]["content"].strip()
+        if not _is_valid_summary(result):
+            logger.warning("finish_sentence_api: Perplexity 출력 비정상 → 원문 사용")
+            return summary_text
+        return result
     except Exception as e:
         logger.error(f"API 호출 실패: {e}")
         logger.info("Perplexity API 실패 → EEVE 모델로 폴백")
         print(f"  → Perplexity API 실패, EEVE로 대체 처리 중...")
         try:
             response = llm.invoke(prompt)
-            return response.content if hasattr(response, "content") else str(response)
+            result = response.content if hasattr(response, "content") else str(response)
+            result = re.sub(r'<think>.*?</think>', '', result, flags=re.DOTALL).strip()
+            if not _is_valid_summary(result):
+                logger.warning("finish_sentence_api: EEVE 출력 비정상 ([지침] 반환 등) → 원문 사용")
+                return summary_text
+            return result
         except Exception as e2:
             logger.error(f"EEVE 폴백도 실패: {e2}")
             return summary_text  # 둘 다 실패 시 원문 반환
