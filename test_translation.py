@@ -34,7 +34,7 @@ Rules:
 
 {korean_summary}
 """
-    llm_en = ChatOllama(model="llama3.3:70b")
+    llm_en = ChatOllama(model="kanana15.7b:latest")
     response = llm_en.invoke(prompt)
     result = response.content if hasattr(response, "content") else str(response)
     result = re.sub(r'<think>.*?</think>', '', result, flags=re.DOTALL).strip()

@@ -315,16 +315,25 @@ def finish_sentence_api(summary_text, sonar_model):
         "temperature": 0.1
     }
     
-    def _is_valid_summary(text):
-        """출력이 정상 요약 형식인지 확인 (프롬프트 지침 내용 반환 방지)."""
-        return '[지침]' not in text and bool(re.search(r'🤖\s*#', text))
+    def _is_valid_summary(text, original=None):
+        """출력이 정상 요약 형식인지 확인 (프롬프트 지침 내용 반환 방지 + 언어 일치 확인)."""
+        if '[지침]' in text:
+            return False
+        if not re.search(r'🤖\s*#', text):
+            return False
+        if original:
+            has_korean_input = any('가' <= c <= '힣' for c in original)
+            has_korean_output = any('가' <= c <= '힣' for c in text)
+            if has_korean_input and not has_korean_output:
+                return False
+        return True
 
     try:
         response = requests.post(API_URL, headers=headers, json=payload)
         response.raise_for_status()
         data = response.json()
         result = data["choices"][0]["message"]["content"].strip()
-        if not _is_valid_summary(result):
+        if not _is_valid_summary(result, summary_text):
             logger.warning("finish_sentence_api: Perplexity 출력 비정상 → 원문 사용")
             return summary_text
         return result
@@ -336,8 +345,8 @@ def finish_sentence_api(summary_text, sonar_model):
             response = llm.invoke(prompt)
             result = response.content if hasattr(response, "content") else str(response)
             result = re.sub(r'<think>.*?</think>', '', result, flags=re.DOTALL).strip()
-            if not _is_valid_summary(result):
-                logger.warning("finish_sentence_api: EEVE 출력 비정상 ([지침] 반환 등) → 원문 사용")
+            if not _is_valid_summary(result, summary_text):
+                logger.warning("finish_sentence_api: EEVE 출력 비정상 (영어 번역 또는 [지침] 반환 등) → 원문 사용")
                 return summary_text
             return result
         except Exception as e2:
@@ -504,7 +513,7 @@ for i, (title, content, url) in enumerate(zip(news_titles, news_contents, final_
     })
 
 def combine_summaries(summaries):
-    result = f"Right Now! AI TIMES's Headline NEWS!!!💌🔥\n📅 {date}\n\n"
+    result = f"Right Now! AI TIMES Headline NEWS!!!💌🔥\n📅 {date}\n\n"
     for summary in summaries:
         title = summary["title"]
         summary_text = summary["summary"]
