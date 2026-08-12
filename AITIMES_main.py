@@ -264,7 +264,7 @@ Rules:
         response = llm_en.invoke(prompt)
         result = response.content if hasattr(response, "content") else str(response)
         result = re.sub(r'<think>.*?</think>', '', result, flags=re.DOTALL).strip()
-        result = _clean_english_body(result, korean_summary)
+        result = _clean_english_body(result)
         logger.info(f"영어 번역 완료:\n{result}")
         return result
     except Exception as e:
@@ -275,7 +275,7 @@ Rules:
             response = llm.invoke(prompt)
             result = response.content if hasattr(response, "content") else str(response)
             result = re.sub(r'<think>.*?</think>', '', result, flags=re.DOTALL).strip()
-            result = _clean_english_body(result, korean_summary)
+            result = _clean_english_body(result)
             logger.info(f"영어 번역 EEVE 폴백 완료:\n{result}")
             return result
         except Exception as e2:
