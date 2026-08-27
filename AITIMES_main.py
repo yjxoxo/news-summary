@@ -172,6 +172,24 @@ API_KEY = os.environ["PERPLEXITY_API_KEY"]
 API_URL = "https://api.perplexity.ai/chat/completions"
 sonar_model = "sonar"
 
+_KNOWN_TERMS = [
+    (r'\bPabl[eé]\b', 'Fable'),
+    (r'\bJambon\b', 'Gemini'),
+    (r'\bPurple\s*XYZ\b', 'Perplexity'),
+    (r'\bPurplexity\b', 'Perplexity'),
+    (r'\bAntropics?\b', 'Anthropic'),
+    (r'\bClaude\s+Pabl[eé]\b', 'Claude Fable'),
+    (r'\bOccupus\b', 'Opus'),
+    (r'\bSonnet\b', 'Sonnet'),
+]
+
+def _fix_known_terms(text):
+    """EEVE가 음역한 잘못된 브랜드/모델명을 올바른 영어로 교체."""
+    for pattern, replacement in _KNOWN_TERMS:
+        text = re.sub(pattern, replacement, text, flags=re.IGNORECASE)
+    return text
+
+
 def _extract_title_line(text):
     """번역 결과에서 실제 제목 줄만 추출."""
     for line in text.split('\n'):
@@ -222,14 +240,22 @@ def _clean_english_body(text, korean_summary=None):
     return result.strip()
 
 
+_TRANSLATE_TITLE_PROMPT = (
+    "Translate this Korean news headline to English. Output only the translated title, nothing else.\n"
+    "Known terms: 페이블=Fable, 오퍼스=Opus, 소넷=Sonnet, 하이쿠=Haiku, 클로드=Claude, "
+    "앤트로픽=Anthropic, 제미나이=Gemini, 퍼플렉시티=Perplexity, 엑사원=EXAONE, "
+    "허깅페이스=HuggingFace, 라마=Llama, 미스트랄=Mistral\n\n"
+)
+
 def translate_title(korean_title):
-    prompt = f"Translate this Korean news headline to English. Output only the translated title, nothing else.\n\n{korean_title}"
+    prompt = _TRANSLATE_TITLE_PROMPT + korean_title
     try:
         llm_en = ChatOllama(model="gpt-oss:20b")
         response = llm_en.invoke(prompt)
         result = response.content if hasattr(response, "content") else str(response)
         result = re.sub(r'<think>.*?</think>', '', result, flags=re.DOTALL).strip()
         result = _extract_title_line(result)
+        result = _fix_known_terms(result)
         logger.info(f"제목 영어 번역 완료: {result}")
         return result
     except Exception as e:
@@ -239,6 +265,7 @@ def translate_title(korean_title):
             result = response.content if hasattr(response, "content") else str(response)
             result = re.sub(r'<think>.*?</think>', '', result, flags=re.DOTALL).strip()
             result = _extract_title_line(result)
+            result = _fix_known_terms(result)
             return result
         except Exception as e2:
             logger.error(f"제목 영어 번역 EEVE 폴백도 실패: {e2}")
@@ -253,6 +280,7 @@ Rules:
 - Each numbered point must be a complete sentence with a clear subject (e.g. "Google released..." not "Released...").
 - Do NOT use a comma after the subject (e.g. "Google releases" not "Google, releases").
 - Translate hashtags to short English CamelCase words. Max 2 words per hashtag. No underscores. (e.g. #AIRegulation, #PriceWar, #ChineseAI — NOT #AIcostsforbusinesses or #pricingcompetition)
+- Known terms: 페이블=Fable, 오퍼스=Opus, 소넷=Sonnet, 하이쿠=Haiku, 클로드=Claude, 앤트로픽=Anthropic, 제미나이=Gemini, 퍼플렉시티=Perplexity, 엑사원=EXAONE, 허깅페이스=HuggingFace
 - Keep proper nouns accurate (e.g. "Claude" not "Cloud", model names exactly as written).
 - Do not add or remove any information.
 
@@ -264,7 +292,7 @@ Rules:
         response = llm_en.invoke(prompt)
         result = response.content if hasattr(response, "content") else str(response)
         result = re.sub(r'<think>.*?</think>', '', result, flags=re.DOTALL).strip()
-        result = _clean_english_body(result)
+        result = _fix_known_terms(_clean_english_body(result))
         logger.info(f"영어 번역 완료:\n{result}")
         return result
     except Exception as e:
@@ -275,7 +303,7 @@ Rules:
             response = llm.invoke(prompt)
             result = response.content if hasattr(response, "content") else str(response)
             result = re.sub(r'<think>.*?</think>', '', result, flags=re.DOTALL).strip()
-            result = _clean_english_body(result)
+            result = _fix_known_terms(_clean_english_body(result))
             logger.info(f"영어 번역 EEVE 폴백 완료:\n{result}")
             return result
         except Exception as e2:
