@@ -473,6 +473,11 @@ for i, (title, content, url) in enumerate(zip(news_titles, news_contents, final_
         summary_text_truncated, found, next_line_exists = truncate_after_third_point(summary_text)
         summary_text_truncated = remove_hashtag_second_line(summary_text_truncated)
 
+        # 원본 🤖 해시태그 줄 보존 (finish_sentence_api가 영어로 바꾸는 것 방지)
+        original_robot_line = next(
+            (l.strip() for l in summary_text_truncated.split('\n') if l.strip().startswith('🤖')), None
+        )
+
         max_api_attempts = 3
         finish_sentence = finish_sentence_api(summary_text_truncated, sonar_model)
         finish_sentence, _, _ = truncate_after_third_point(finish_sentence)
@@ -488,6 +493,14 @@ for i, (title, content, url) in enumerate(zip(news_titles, news_contents, final_
         else:
             if not check_number_sequence(finish_sentence):
                 finish_sentence = summary_text_truncated
+
+        # 🤖 줄이 바뀌었으면 원본으로 복원
+        if original_robot_line:
+            lines = finish_sentence.split('\n')
+            robot_idx = next((i for i, l in enumerate(lines) if l.strip().startswith('🤖')), None)
+            if robot_idx is not None and lines[robot_idx].strip() != original_robot_line:
+                lines[robot_idx] = original_robot_line
+                finish_sentence = '\n'.join(lines)
 
         logger.info(f"summary_text_truncated*\n{summary_text_truncated}\nfinish_sentence*\n {finish_sentence}\n\n")
         formatted_summary, _, _ = truncate_after_third_point(finish_sentence)
