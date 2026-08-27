@@ -173,14 +173,21 @@ API_URL = "https://api.perplexity.ai/chat/completions"
 sonar_model = "sonar"
 
 _KNOWN_TERMS = [
+    # Claude 모델명
     (r'\bPabl[eé]\b', 'Fable'),
+    (r'\bCloud\s+Pabl?\w*\b', 'Claude Fable'),
+    (r'\bClaude\s+Pabl[eé]\b', 'Claude Fable'),
+    (r'\bOccupus\b', 'Opus'),
+    (r'\bOrpheus(?:-level)?\b', 'Opus'),
+    # AI 회사/서비스
+    (r'\bAntropics?\b', 'Anthropic'),
+    (r'\bJemena[iy]\b', 'Gemini'),
     (r'\bJambon\b', 'Gemini'),
     (r'\bPurple\s*XYZ\b', 'Perplexity'),
     (r'\bPurplexity\b', 'Perplexity'),
-    (r'\bAntropics?\b', 'Anthropic'),
-    (r'\bClaude\s+Pabl[eé]\b', 'Claude Fable'),
-    (r'\bOccupus\b', 'Opus'),
-    (r'\bSonnet\b', 'Sonnet'),
+    # Claude 제품
+    (r'\bCloud\s+Tags?\b', 'Claude Tags'),
+    (r'\bCloud\s+Code\b', 'Claude Code'),
 ]
 
 def _fix_known_terms(text):
@@ -266,6 +273,7 @@ def translate_title(korean_title):
             result = re.sub(r'<think>.*?</think>', '', result, flags=re.DOTALL).strip()
             result = _extract_title_line(result)
             result = _fix_known_terms(result)
+            logger.info(f"제목 영어 번역 EEVE 완료: {result}")
             return result
         except Exception as e2:
             logger.error(f"제목 영어 번역 EEVE 폴백도 실패: {e2}")
