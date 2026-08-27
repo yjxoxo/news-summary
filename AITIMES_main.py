@@ -252,7 +252,7 @@ Rules:
 - Keep the exact format: 🤖 line first, then 1. 2. 3.
 - Each numbered point must be a complete sentence with a clear subject (e.g. "Google released..." not "Released...").
 - Do NOT use a comma after the subject (e.g. "Google releases" not "Google, releases").
-- Translate hashtags to English. No underscores in hashtags (e.g. #AIRegulation not #AI_Regulation).
+- Translate hashtags to short English CamelCase words. Max 2 words per hashtag. No underscores. (e.g. #AIRegulation, #PriceWar, #ChineseAI — NOT #AIcostsforbusinesses or #pricingcompetition)
 - Keep proper nouns accurate (e.g. "Claude" not "Cloud", model names exactly as written).
 - Do not add or remove any information.
 
