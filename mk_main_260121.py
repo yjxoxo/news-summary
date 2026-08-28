@@ -795,6 +795,7 @@ def main():
                     
                     formatted_summary, found, next_line_exists = truncate_after_third_point(finish_sentence)
                     formatted_summary = remove_hashtag_second_line(formatted_summary)  # 최종 정리
+                    formatted_summary = re.sub(r'GP트', 'GPT', formatted_summary)
             
             # 마지막에 기본 응답이 있으면 할당
             if default_response:
