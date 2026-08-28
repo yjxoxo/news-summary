@@ -197,6 +197,13 @@ def _fix_known_terms(text):
     return text
 
 
+def _fix_korean_summary_terms(text):
+    """한국어 요약에서 영문 약어를 한국어 음절로 쓴 오류 교정 (예: GP트→GPT)."""
+    text = re.sub(r'GP트', 'GPT', text)
+    text = re.sub(r'챗GPT워크', '챗GPT 워크', text)
+    return text
+
+
 def _extract_title_line(text):
     """번역 결과에서 실제 제목 줄만 추출."""
     for line in text.split('\n'):
@@ -541,6 +548,7 @@ for i, (title, content, url) in enumerate(zip(news_titles, news_contents, final_
         logger.info(f"summary_text_truncated*\n{summary_text_truncated}\nfinish_sentence*\n {finish_sentence}\n\n")
         formatted_summary, _, _ = truncate_after_third_point(finish_sentence)
         formatted_summary = remove_hashtag_second_line(formatted_summary)
+        formatted_summary = _fix_korean_summary_terms(formatted_summary)
 
     print(f"  → 영어 번역 중...")
     logger.info(f"뉴스 {num} 영어 번역 요청")
