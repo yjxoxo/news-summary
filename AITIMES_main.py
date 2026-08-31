@@ -269,6 +269,8 @@ def translate_title(korean_title):
         result = response.content if hasattr(response, "content") else str(response)
         result = re.sub(r'<think>.*?</think>', '', result, flags=re.DOTALL).strip()
         result = _extract_title_line(result)
+        if any('가' <= c <= '힣' for c in result):
+            raise ValueError(f"번역 결과에 한글 포함: {result[:50]}")
         result = _fix_known_terms(result)
         logger.info(f"제목 영어 번역 완료: {result}")
         return result
@@ -279,6 +281,9 @@ def translate_title(korean_title):
             result = response.content if hasattr(response, "content") else str(response)
             result = re.sub(r'<think>.*?</think>', '', result, flags=re.DOTALL).strip()
             result = _extract_title_line(result)
+            if any('가' <= c <= '힣' for c in result):
+                logger.warning(f"제목 EEVE 번역 결과에 한글 포함 → 원본 반환: {result[:50]}")
+                return korean_title
             result = _fix_known_terms(result)
             logger.info(f"제목 영어 번역 EEVE 완료: {result}")
             return result
