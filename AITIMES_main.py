@@ -281,14 +281,14 @@ def translate_title(korean_title):
             result = response.content if hasattr(response, "content") else str(response)
             result = re.sub(r'<think>.*?</think>', '', result, flags=re.DOTALL).strip()
             result = _extract_title_line(result)
-            if any('가' <= c <= '힣' for c in result) or len(result.split()) < 3:
+            if any('가' <= c <= '힣' for c in result) or len(result) < len(korean_title) * 0.5:
                 logger.warning(f"제목 EEVE 번역 결과 불량(한글 포함 또는 너무 짧음) → 단순 프롬프트로 재시도: {result[:50]}")
                 simple_prompt = f"Translate to English (title only, no explanation):\n{korean_title}"
                 response2 = llm.invoke(simple_prompt)
                 result = response2.content if hasattr(response2, "content") else str(response2)
                 result = re.sub(r'<think>.*?</think>', '', result, flags=re.DOTALL).strip()
                 result = _extract_title_line(result)
-                if any('가' <= c <= '힣' for c in result) or len(result.split()) < 3:
+                if any('가' <= c <= '힣' for c in result) or len(result) < len(korean_title) * 0.5:
                     logger.warning(f"제목 EEVE 재시도도 불량 → 원본 반환")
                     return korean_title
             result = _fix_known_terms(result)
