@@ -182,6 +182,8 @@ _KNOWN_TERMS = [
     # AI 회사/서비스
     (r'\bAntropics?\b', 'Anthropic'),
     (r'\bJemena[iy]\b', 'Gemini'),
+    (r'\bJeeminai\b', 'Gemini'),
+    (r'\bJemini\b', 'Gemini'),
     (r'\bJambon\b', 'Gemini'),
     (r'\bPurple\s*XYZ\b', 'Perplexity'),
     (r'\bPurplexity\b', 'Perplexity'),
@@ -227,6 +229,19 @@ def _extract_title_line(text):
     return text.strip().split('\n')[0]
 
 
+def _is_bad_title(result, korean_title):
+    """번역 결과가 불량인지 판단."""
+    if any('가' <= c <= '힣' for c in result):
+        return True
+    if len(result) < len(korean_title) * 0.5:
+        return True
+    if re.search(r'\bKnown\s+terms?\s*:', result, flags=re.IGNORECASE):
+        return True
+    if result.count('"') % 2 != 0 or result.count("'") % 2 != 0:
+        return True
+    return False
+
+
 def _clean_english_body(text, korean_summary=None):
     """번역 결과에서 프리앰블 제거, 🤖 이모지 정상화."""
     lines = text.split('\n')
@@ -269,8 +284,8 @@ def translate_title(korean_title):
         result = response.content if hasattr(response, "content") else str(response)
         result = re.sub(r'<think>.*?</think>', '', result, flags=re.DOTALL).strip()
         result = _extract_title_line(result)
-        if any('가' <= c <= '힣' for c in result):
-            raise ValueError(f"번역 결과에 한글 포함: {result[:50]}")
+        if _is_bad_title(result, korean_title):
+            raise ValueError(f"번역 결과 불량: {result[:50]}")
         result = _fix_known_terms(result)
         logger.info(f"제목 영어 번역 완료: {result}")
         return result
@@ -281,14 +296,14 @@ def translate_title(korean_title):
             result = response.content if hasattr(response, "content") else str(response)
             result = re.sub(r'<think>.*?</think>', '', result, flags=re.DOTALL).strip()
             result = _extract_title_line(result)
-            if any('가' <= c <= '힣' for c in result) or len(result) < len(korean_title) * 0.5:
-                logger.warning(f"제목 EEVE 번역 결과 불량(한글 포함 또는 너무 짧음) → 단순 프롬프트로 재시도: {result[:50]}")
+            if _is_bad_title(result, korean_title):
+                logger.warning(f"제목 EEVE 번역 결과 불량 → 단순 프롬프트로 재시도: {result[:50]}")
                 simple_prompt = f"Translate to English (title only, no explanation):\n{korean_title}"
                 response2 = llm.invoke(simple_prompt)
                 result = response2.content if hasattr(response2, "content") else str(response2)
                 result = re.sub(r'<think>.*?</think>', '', result, flags=re.DOTALL).strip()
                 result = _extract_title_line(result)
-                if any('가' <= c <= '힣' for c in result) or len(result) < len(korean_title) * 0.5:
+                if _is_bad_title(result, korean_title):
                     logger.warning(f"제목 EEVE 재시도도 불량 → 원본 반환")
                     return korean_title
             result = _fix_known_terms(result)
