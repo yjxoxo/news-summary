@@ -179,10 +179,15 @@ _KNOWN_TERMS = [
     (r'\bClaude\s+Pabl[eé]\b', 'Claude Fable'),
     (r'\bOccupus\b', 'Opus'),
     (r'\bOrpheus(?:-level)?\b', 'Opus'),
+    # OpenAI 모델명
+    (r'\bAstral\b', 'Astra'),
+    # 로봇/하드웨어
+    (r'\bAlegro\b', 'Allegro'),
     # AI 회사/서비스
     (r'\bAntropics?\b', 'Anthropic'),
     (r'\bJemena[iy]\b', 'Gemini'),
     (r'\bJeeminai\b', 'Gemini'),
+    (r'\bJejinair\b', 'Gemini'),
     (r'\bJemini\b', 'Gemini'),
     (r'\bJambon\b', 'Gemini'),
     (r'\bPurple\s*XYZ\b', 'Perplexity'),
