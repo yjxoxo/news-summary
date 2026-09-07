@@ -185,6 +185,7 @@ _KNOWN_TERMS = [
     (r'\bAlegro\b', 'Allegro'),
     # AI 회사/서비스
     (r'\bAntropics?\b', 'Anthropic'),
+    (r'\bAntrofic\b', 'Anthropic'),
     (r'\bJemena[iy]\b', 'Gemini'),
     (r'\bJeeminai\b', 'Gemini'),
     (r'\bJejinair\b', 'Gemini'),
@@ -207,6 +208,9 @@ def _fix_known_terms(text):
 def _fix_korean_summary_terms(text):
     """한국어 요약에서 영문 약어를 한국어 음절로 쓴 오류 교정 (예: GP트→GPT)."""
     text = re.sub(r'GP트', 'GPT', text)
+    text = re.sub(r'\bGP-(\d)', r'GPT-\1', text)
+    text = re.sub(r'앤트로펙', '앤트로픽', text)
+    text = re.sub(r'클라우드\s+(맥스|코드|팀)', lambda m: '클로드 ' + m.group(1), text)
     text = re.sub(r'챗GPT워크', '챗GPT 워크', text)
     return text
 
@@ -266,6 +270,14 @@ def _clean_english_body(text, korean_summary=None):
     if first and '#' in first and not first.startswith('🤖'):
         corrected = re.sub(r'^[^\w#\s]*\s*', '🤖 ', first)
         result = corrected + '\n' + '\n'.join(result.split('\n')[1:])
+    # 🤖 줄에서 # 없는 태그에 # 추가 (예: 🤖 iPhone #Price → 🤖 #iPhone #Price)
+    lines = result.split('\n')
+    if lines and lines[0].strip().startswith('🤖'):
+        robot = lines[0].strip()
+        tokens = robot[len('🤖'):].split()
+        tokens = ['#' + t if t and not t.startswith('#') else t for t in tokens]
+        lines[0] = '🤖 ' + ' '.join(tokens)
+        result = '\n'.join(lines)
     # 🤖 줄이 없으면 한국어 원본에서 가져오기
     if result and not result.startswith('🤖') and korean_summary:
         ko_robot = next((l.strip() for l in korean_summary.split('\n') if l.strip().startswith('🤖')), None)
