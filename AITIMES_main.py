@@ -242,7 +242,7 @@ def _is_bad_title(result, korean_title):
         return True
     if re.search(r'\bKnown\s+terms?\s*:', result, flags=re.IGNORECASE):
         return True
-    if result.count('"') % 2 != 0 or result.count("'") % 2 != 0:
+    if result.count('"') % 2 != 0:
         return True
     return False
 
