@@ -796,6 +796,10 @@ def main():
                     formatted_summary, found, next_line_exists = truncate_after_third_point(finish_sentence)
                     formatted_summary = remove_hashtag_second_line(formatted_summary)  # 최종 정리
                     formatted_summary = re.sub(r'GP트', 'GPT', formatted_summary)
+                    # 번호 항목 끝 해시태그 제거 (예: "3. 내용 #태그1 #태그2")
+                    formatted_summary = re.sub(r'(^\d+\..+?)\s+(?:#\S+\s*)+$', r'\1', formatted_summary, flags=re.MULTILINE)
+                    # URL 제거 (pic.twitter.com, http 등)
+                    formatted_summary = re.sub(r'\s*(?:https?://|pic\.twitter\.com)\S+', '', formatted_summary)
             
             # 마지막에 기본 응답이 있으면 할당
             if default_response:
